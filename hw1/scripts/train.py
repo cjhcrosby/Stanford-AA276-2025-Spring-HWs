@@ -12,7 +12,7 @@ from neural_clbf.training.utils import current_git_hash
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-batch_size = 32
+batch_size = 64
 controller_period = 0.05
 
 start_x = torch.tensor(
