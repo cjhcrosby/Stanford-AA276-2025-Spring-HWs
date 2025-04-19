@@ -40,9 +40,9 @@ Try your best to not exceed $10 in credits -  you can stop training early if you
 REMEMBER TO SHUTDOWN YOUR VIRTUAL MACHINES AFTER TRAINING, TO AVOID ACCUMULATING FEES.
 """
 
-
+import numpy as np
 import torch
-
+import pdb
 
 def state_limits():
         """
@@ -53,7 +53,18 @@ def state_limits():
                 where upper: torch float32 tensor with shape [13]
                       lower: torch float32 tensor with shape [13]
         """
-        # YOUR CODE HERE
+        p_u = 3.0
+        p_l = -3.0
+        q_u = 1.0
+        q_l = -1.0
+        v_u = 5.0
+        v_l = -5.0
+        w_u = 5.0
+        w_l = -5.0
+        upper = torch.tensor([p_u,p_u,p_u,q_u,q_u,q_u,q_u,v_u,v_u,v_u,w_u,w_u,w_u])
+        lower = torch.tensor([p_l,p_l,p_l,q_l,q_l,q_l,q_l,v_l,v_l,v_l,w_l,w_l,w_l])
+        
+        return (upper,lower)
         pass
 
 
@@ -66,7 +77,17 @@ def control_limits():
             where upper: torch float32 tensor with shape [4]
                   lower: torch float32 tensor with shape [4]
     """
-    # YOUR CODE HERE
+    F_u = 20.0
+    F_l = -20.0
+    a_x_u = 8.0
+    a_x_l = -8.0
+    a_y_u = 8.0
+    a_y_l = -8.0
+    a_z_u = 4.0
+    a_z_l = -4.0
+    upper = torch.tensor([F_u, a_x_u, a_y_u, a_z_u])
+    lower = torch.tensor([F_l, a_x_l, a_y_l, a_z_l])
+    return (upper, lower)
     pass
 
 
@@ -83,7 +104,9 @@ def safe_mask(x):
     returns:
         is_safe: torch bool tensor with shape [batch_size]
     """
-    # YOUR CODE HERE
+    is_safe = torch.sqrt(x[:,0]**2 + x[:,1]**2) > 2.8
+    return is_safe
+
     pass
 
 
@@ -97,9 +120,9 @@ def failure_mask(x):
     returns:
         is_failure: torch bool tensor with shape [batch_size]
     """
-    # YOUR CODE HERE
+    is_failure = torch.sqrt(x[:,0]**2 + x[:,1]**2) < 0.5
+    return is_failure
     pass
-
 
 def f(x):
     """
@@ -128,7 +151,6 @@ def f(x):
     f[:, WYi] =  5 * WX * WZ / 9.0
     return f
 
-
 def g(x):
     """
     Return the control-dependent part of the control-affine dynamics.
@@ -139,5 +161,21 @@ def g(x):
     returns:
         g: torch float32 tensor with shape [batch_size, 13, 4]
     """
-    # YOUR CODE HERE
+    # control dims
+    Fi = 0
+    axi = 1
+    ayi = 2
+    azi = 3
+
+    PXi, PYi, PZi, QWi, QXi, QYi, QZi, VXi, VYi, VZi, WXi, WYi, WZi = [i for i in range(13)]
+    PX, PY, PZ, QW, QX, QY, QZ, VX, VY, VZ, WX, WY, WZ = [x[:, i] for i in range(13)]
+
+    g = torch.zeros(x.shape[0], x.shape[1], 4)
+    g[:,VXi,Fi] = 2*(QW*QY + QX*QZ)
+    g[:,VYi,Fi] = 2*(QY*QZ - QW*QX)
+    g[:,VZi,Fi] = 2*(1/2 - QX**2 - QY**2)
+    g[:,WXi,axi] = 1
+    g[:,WYi,ayi] = 1
+    g[:,WZi,azi] = 1
+    return g
     pass
