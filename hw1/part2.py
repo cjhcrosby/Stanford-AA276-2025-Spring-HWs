@@ -41,7 +41,8 @@ def euler_step(x, u, dt):
     returns:
         xn: torch float32 tensor with shape [batch_size, 13]
     """
-    # YOUR CODE HERE
+    return x + dt * (f(x) + (g(x) @ u.unsqueeze(2)).squeeze(2))
+
     pass
 
     
@@ -64,7 +65,13 @@ def roll_out(x0, u_fn, nt, dt):
     returns:
         xts: torch float32 tensor with shape [batch_size, nt, 13]
     """
-    # YOUR CODE HERE
+    xts = torch.zeros((x0.shape[0], nt, x0.shape[1]), dtype=torch.float32)
+    xts[:, 0, :] = euler_step(x0, u_fn(x0), dt) # start at x1
+    for i in range(1,nt):
+        x = xts[:, i-1, :] # grab previous state
+        u = u_fn(x)
+        xts[:, i, :] = euler_step(x, u, dt)
+    return xts
     pass
 
 
@@ -95,4 +102,19 @@ def u_qp(x, h, dhdx, u_ref, gamma, lmbda):
         u_qp: torch float32 tensor with shape [batch_size, 4]
     """
     # YOUR CODE HERE
+    batch_size = x.shape[0]
+    u = cp.Variable(u_ref.shape)
+    constraints = []
+    breakpoint()        
+    constraints.append(u >= control_limits()[0].repeat(batch_size,1))
+    constraints.append(u <= control_limits()[1].repeat(batch_size,1))
+    constraints.append(dhdx + gamma*h + lmbda >= 0)
+    # Define the objective function
+    objective = cp.Minimize(cp.sum_squares(u - u_ref))
+    # Define the problem
+    prob = cp.Problem(objective, constraints)
+    prob.solve()
+    u_qp = u.value
+    u_qp = torch.tensor(u_qp, dtype=torch.float32)
+    return u_qp
     pass
