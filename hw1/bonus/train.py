@@ -152,7 +152,7 @@ tb_logger = pl_loggers.TensorBoardLogger(
 )
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='val_loss',
+    monitor='Total loss / val',  # Change from "val_loss" to "Total loss / val"
     dirpath='outputs/checkpoints',
     filename='cbf-{epoch:02d}-{val_loss:.2f}',
     save_top_k=3,
@@ -160,7 +160,7 @@ checkpoint_callback = ModelCheckpoint(
 )
 
 early_stop_callback = EarlyStopping(
-    monitor="val_loss",
+    monitor="Total loss / val",  # Change from "val_loss" to "Total loss / val"
     min_delta=0.00,
     patience=10,
     verbose=True,
