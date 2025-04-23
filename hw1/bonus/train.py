@@ -109,7 +109,7 @@ dynamics_model = CustomInvertedPendulum(
 
 # Initialize the DataModule
 initial_conditions = [
-    (-torch.pi, torch.pi),
+    (-np.pi, np.pi),
     (-8.0, 8.0)
 ]
 data_module = EpisodicDataModule(

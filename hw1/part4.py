@@ -57,7 +57,7 @@ def state_limits():
                 where upper: torch float32 tensor with shape [13]
                       lower: torch float32 tensor with shape [13]
         """
-        theta_max = torch.pi
+        theta_max = np.pi
         theta_dot_max = 10.0
         upper = torch.tensor([theta_max, theta_dot_max])
         lower = torch.tensor([-theta_max, -theta_dot_max])
