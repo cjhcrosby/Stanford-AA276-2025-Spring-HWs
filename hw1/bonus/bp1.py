@@ -11,9 +11,20 @@ import matplotlib.colors as mcolors
 import pdb
 from neural_clbf.controllers import NeuralCBFController
 from neural_clbf.systems import inverted_pendulum
-sys.path.append('../')  # Add parent directory to path
-from part4 import state_limits, control_limits, safe_mask
-from part4 import f as part4_f, g as part4_g  # Import with different names to avoid conflicts
+
+# Get absolute path to the directory containing part4.py
+hw1_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(hw1_dir)  # Add to Python's path
+
+# Now try importing
+try:
+    from part4 import state_limits, control_limits, safe_mask
+    from part4 import f as part4_f, g as part4_g
+    print("Successfully imported part4 module")
+except ImportError:
+    print(f"Looking for part4.py in: {hw1_dir}")
+    print(f"Files in directory: {os.listdir(hw1_dir)}")
+    raise
 
 
 class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
