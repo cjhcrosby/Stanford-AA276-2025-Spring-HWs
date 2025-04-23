@@ -123,10 +123,10 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
         return u_qp(x, h_fn(x), dhdx_fn(x), u_ref_fn(x), gamma, lmbda)
     # first, you should compute state trajectories xts using roll_out(.)
     xts = roll_out(x0, u_fn, nt, dt)
-    xts = xts.detach().cpu().numpy()
+    xts_np = xts.detach().cpu().numpy()
     batch_size = x0.shape[0]
     for i in range(batch_size):
-        positions = xts[i, :, :2]
+        positions = xts_np[i, :, :2]
         safe0 = h_fn(x0[i:i+1]).item()
         color = 'blue' if safe0 >= 0 else 'red'
         ax.plot(positions[:, 0], positions[:, 1], color=color)
