@@ -121,6 +121,15 @@ def main2_3():
 def plot_neural_vs_analytical_cbf():
     sys.path.append("../libraries/neural_clbf")
     checkpoint_path = 'outputs/cbf-epoch=06-val_total_loss=0.00.ckpt'
+    if not os.path.exists(checkpoint_path):
+            print(f"Looking for checkpoints in alternate location...")
+            checkpoint_dir = "../outputs/checkpoints/"
+            checkpoints = [f for f in os.listdir(checkpoint_dir) if f.endswith('.ckpt')]
+            if checkpoints:
+                checkpoint_path = os.path.join(checkpoint_dir, sorted(checkpoints)[-1])
+                print(f"Using checkpoint: {checkpoint_path}")
+            else:
+                raise FileNotFoundError("No checkpoint files found")
     model = NeuralCBFController.load_from_checkpoint(checkpoint_path)
     model.eval()
 
