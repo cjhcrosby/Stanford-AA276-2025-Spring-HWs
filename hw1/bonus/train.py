@@ -15,6 +15,8 @@ from neural_clbf.training.utils import current_git_hash
 
 import os
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 resume_from_checkpoint = None
@@ -86,16 +88,15 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
         # Adapt your f function to return the right shape
         f_res = f(x)
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1))
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
         result[:, 0, 0] = f_res[:, 0]
         result[:, 1, 0] = f_res[:, 1]
         return result
     
-    # Similar for g
     def _g(self, x, params):
         g_res = g(x)
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1))
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
         result[:, 0, 0] = g_res[:, 0]
         result[:, 1, 0] = g_res[:, 1]
         return result
