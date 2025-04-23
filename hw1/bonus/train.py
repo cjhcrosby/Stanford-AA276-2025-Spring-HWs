@@ -20,10 +20,10 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 resume_from_checkpoint = None
-if os.path.exists('outputs/checkpoints'):
-    checkpoints = [f for f in os.listdir('outputs/checkpoints') if f.endswith('.ckpt')]
+if os.path.exists('outputs/checkpoints2'):
+    checkpoints = [f for f in os.listdir('outputs/checkpoint2') if f.endswith('.ckpt')]
     if checkpoints:
-        resume_from_checkpoint = os.path.join('outputs/checkpoints', sorted(checkpoints)[-1])
+        resume_from_checkpoint = os.path.join('outputs/checkpoints2', sorted(checkpoints)[-1])
         print(f"Resuming from {resume_from_checkpoint}")
 
 batch_size = 64
@@ -119,7 +119,7 @@ data_module = EpisodicDataModule(
     max_points=10000000,
     val_split=0.01,
     batch_size=1024,
-    # quotas={"safe": 0.2, "unsafe": 0.2, "goal": 0.4},
+    quotas={"safe": 0.6, "unsafe": 0.2, "goal": 0.1},
 )
 
 experiment_suite = ExperimentSuite([])
@@ -131,13 +131,13 @@ cbf_controller = NeuralCBFController(
     data_module,
     experiment_suite=experiment_suite,
     cbf_hidden_layers=3,
-    cbf_hidden_size=128, # lower size
+    cbf_hidden_size=256, # lower size
     cbf_lambda=0.3,
-    cbf_relaxation_penalty=1e3,
+    cbf_relaxation_penalty=1e4,
     controller_period=controller_period,
-    primal_learning_rate=1e-3,
-    scale_parameter=1.0, 
-    learn_shape_epochs=1,
+    primal_learning_rate=1e-2,
+    scale_parameter=10.0, 
+    learn_shape_epochs=5,
     use_relu=True,
     disable_gurobi=True,
 )
@@ -148,11 +148,11 @@ tb_logger = pl_loggers.TensorBoardLogger(
     name='',
 )
 
-os.makedirs('outputs/checkpoints', exist_ok=True)
+os.makedirs('outputs/checkpoint2', exist_ok=True)
 
 checkpoint_callback = ModelCheckpoint(
     monitor='Total loss / val',
-    dirpath='outputs/checkpoints',
+    dirpath='outputs/checkpoints2',
     filename='cbf-{epoch:02d}-{val_total_loss:.2f}',  
     save_top_k=3,
     mode='min',
@@ -179,8 +179,8 @@ trainer = pl.Trainer.from_argparse_args(
 torch.autograd.set_detect_anomaly(True)
 trainer.fit(cbf_controller)
 
-if os.path.exists('outputs/checkpoints'):
-    print("Checkpoint files found:", os.listdir('outputs/checkpoints'))
+if os.path.exists('outputs/checkpoints2'):
+    print("Checkpoint files found:", os.listdir('outputs/checkpoints2'))
 else:
     print("No checkpoint directory found!")
 
