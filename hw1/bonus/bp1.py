@@ -12,7 +12,38 @@ import pdb
 from neural_clbf.controllers import NeuralCBFController
 
 
-
+class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
+    def __init__(self, nominal_params, dt=0.01, controller_dt=None, scenarios=None):
+        super().__init__(nominal_params, dt, controller_dt, scenarios)
+    
+    # Override methods with your part4 implementations
+    @property
+    def state_limits(self):
+        return state_limits()
+    
+    @property
+    def control_limits(self):
+        return control_limits()
+    
+    def safe_mask(self, x):
+        return safe_mask(x)
+    
+    def _f(self, x, params):
+        # Adapt your f function to return the right shape
+        f_res = f(x)
+        batch_size = x.shape[0]
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result[:, 0, 0] = f_res[:, 0]
+        result[:, 1, 0] = f_res[:, 1]
+        return result
+    
+    def _g(self, x, params):
+        g_res = g(x)
+        batch_size = x.shape[0]
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result[:, 0, 0] = g_res[:, 0]
+        result[:, 1, 0] = g_res[:, 1]
+        return result
 
 # breakpoint()
 
