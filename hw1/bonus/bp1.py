@@ -119,19 +119,58 @@ def main2_3():
     plt.show()
 
 def plot_neural_vs_analytical_cbf():
-    sys.path.append("../libraries/neural_clbf")
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     
-    checkpoint_path = '../outputs/cbf-epoch=06-val_total_loss=0.00.ckpt'
+    # checkpoint_path = 'outputs/cbf-epoch=06-val_total_loss=0.00.ckpt'
     
-    # if not os.path.exists(checkpoint_path):
-    #         print(f"Looking for checkpoints in alternate location...")
-    #         checkpoint_dir = "../outputs/checkpoints/"
-    #         checkpoints = [f for f in os.listdir(checkpoint_dir) if f.endswith('.ckpt')]
-    #         if checkpoints:
-    #             checkpoint_path = os.path.join(checkpoint_dir, sorted(checkpoints)[-1])
-    #             print(f"Using checkpoint: {checkpoint_path}")
-    #         else:
-    #             raise FileNotFoundError("No checkpoint files found")
+    possible_locations = [
+        # Current working directory
+        'cbf.ckpt',
+        'outputs/cbf.ckpt',
+        'outputs/checkpoints',
+        '../outputs/cbf.ckpt',
+        # Absolute paths
+        '/home/coltoncrosby/Stanford-AA276-2025-Spring-HWs/hw1/outputs/cbf.ckpt',
+        '/home/coltoncrosby/Stanford-AA276-2025-Spring-HWs/outputs/cbf.ckpt',
+        '/home/coltoncrosby/Stanford-AA276-2025-Spring-HWs/hw1/bonus/outputs/cbf.ckpt'
+    ]
+    
+    # Find any checkpoints in these locations
+    checkpoint_path = None
+    for location in possible_locations:
+        print(f"Checking location: {location}")
+        if os.path.isfile(location):
+            checkpoint_path = location
+            print(f"Found checkpoint file: {checkpoint_path}")
+            break
+        elif os.path.isdir(location):
+            print(f"Found directory: {location}")
+            checkpoints = [os.path.join(location, f) for f in os.listdir(location) if f.endswith('.ckpt')]
+            if checkpoints:
+                checkpoint_path = sorted(checkpoints)[-1]  # Get the last checkpoint
+                print(f"Found checkpoint: {checkpoint_path}")
+                break
+    
+    if checkpoint_path is None:
+        # Let's look for ANY .ckpt files in the file system
+        print("Searching for any .ckpt files in the current directory tree...")
+        found_files = []
+        for root, dirs, files in os.walk('.', topdown=True):
+            for file in files:
+                if file.endswith('.ckpt'):
+                    found_path = os.path.join(root, file)
+                    found_files.append(found_path)
+                    print(f"Found potential checkpoint: {found_path}")
+        
+        if found_files:
+            checkpoint_path = found_files[0]
+            print(f"Using first found checkpoint: {checkpoint_path}")
+        else:
+            print("No checkpoint files found anywhere in the directory tree!")
+            raise FileNotFoundError("No checkpoint files found")
+    
+    # Load model and continue with existing code
+    print(f"Loading model from: {checkpoint_path}")
     model = NeuralCBFController.load_from_checkpoint(checkpoint_path)
     model.eval()
 
