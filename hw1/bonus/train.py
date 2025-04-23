@@ -21,7 +21,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 resume_from_checkpoint = None
 if os.path.exists('outputs/checkpoints2'):
-    checkpoints = [f for f in os.listdir('outputs/checkpoint2') if f.endswith('.ckpt')]
+    checkpoints = [f for f in os.listdir('outputs/checkpoints2') if f.endswith('.ckpt')]
     if checkpoints:
         resume_from_checkpoint = os.path.join('outputs/checkpoints2', sorted(checkpoints)[-1])
         print(f"Resuming from {resume_from_checkpoint}")
@@ -148,7 +148,7 @@ tb_logger = pl_loggers.TensorBoardLogger(
     name='',
 )
 
-os.makedirs('outputs/checkpoint2', exist_ok=True)
+os.makedirs('outputs/checkpoints2', exist_ok=True)
 
 checkpoint_callback = ModelCheckpoint(
     monitor='Total loss / val',
