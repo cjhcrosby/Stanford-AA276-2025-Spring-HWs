@@ -10,6 +10,10 @@ import matplotlib.collections as mcoll
 import matplotlib.colors as mcolors
 import pdb
 from neural_clbf.controllers import NeuralCBFController
+from neural_clbf.systems import inverted_pendulum
+sys.path.append('../')  # Add parent directory to path
+from part4 import state_limits, control_limits, safe_mask
+from part4 import f as part4_f, g as part4_g  # Import with different names to avoid conflicts
 
 
 class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
@@ -30,17 +34,17 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
     
     def _f(self, x, params):
         # Adapt your f function to return the right shape
-        f_res = f(x)
+        f_res = part4_f(x)  # Use the imported function
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)
         result[:, 0, 0] = f_res[:, 0]
         result[:, 1, 0] = f_res[:, 1]
         return result
     
     def _g(self, x, params):
-        g_res = g(x)
+        g_res = part4_g(x)  # Use the imported function
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)
         result[:, 0, 0] = g_res[:, 0]
         result[:, 1, 0] = g_res[:, 1]
         return result
@@ -150,7 +154,7 @@ def main2_3():
     plt.show()
 
 def plot_neural_vs_analytical_cbf():
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     
     checkpoint_path = 'outputs/checkpoints/cbf-epoch=06-val_total_loss=0.00.ckpt'
 
@@ -225,4 +229,4 @@ def plot_neural_vs_analytical_cbf():
 
 if __name__ == "__main__":
     # main2_3()  
-    plot_neural_vs_analytical_cbf() 
+    plot_neural_vs_analytical_cbf()
