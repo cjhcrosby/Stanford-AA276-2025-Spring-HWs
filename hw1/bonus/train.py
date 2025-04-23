@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
 import torch
+import numpy as np
 import torch.multiprocessing
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
