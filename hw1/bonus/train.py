@@ -64,16 +64,40 @@ from part4 import f
 from part4 import g
 
 from neural_clbf.systems import inverted_pendulum
-dynamics_model = inverted_pendulum.InvertedPendulum(
-    state_limits,
-    control_limits,
-    safe_mask,
-    failure_mask,
-    f,
-    g,
+
+class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
+    def __init__(self, nominal_params, dt=0.01, controller_dt=None, scenarios=None):
+        super().__init__(nominal_params, dt, controller_dt, scenarios)
+    
+    # Override methods with your part4 implementations
+    @property
+    def state_limits(self):
+        return state_limits()
+    
+    @property
+    def control_limits(self):
+        return control_limits()
+    
+    def safe_mask(self, x):
+        return safe_mask(x)
+    
+    def _f(self, x, params):
+        # Adapt your f function to return the right shape
+        f_res = f(x)
+        batch_size = x.shape[0]
+        result = torch.zeros((batch_size, self.n_dims, 1))
+        result[:, 0, 0] = f_res[:, 0]
+        result[:, 1, 0] = f_res[:, 1]
+        return result
+    
+    # Similar for g
+
+# Then use it
+dynamics_model = CustomInvertedPendulum(
     nominal_params,
     dt=simulation_dt,
     controller_dt=controller_period,
+    scenarios=scenarios
 )
 
 # Initialize the DataModule
