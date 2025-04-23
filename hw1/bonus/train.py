@@ -91,6 +91,13 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
         return result
     
     # Similar for g
+    def _g(self, x, params):
+        g_res = g(x)
+        batch_size = x.shape[0]
+        result = torch.zeros((batch_size, self.n_dims, 1))
+        result[:, 0, 0] = g_res[:, 0]
+        result[:, 1, 0] = g_res[:, 1]
+        return result
 
 # Then use it
 dynamics_model = CustomInvertedPendulum(
