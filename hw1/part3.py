@@ -134,10 +134,10 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
         ax.scatter(positions[0, 0], positions[0, 1], color=color, marker='o')
     initially_safe = safe_mask(x0)
     failures = torch.zeros_like(initially_safe)
+
     for i in range(batch_size):
         if initially_safe[i]:
-            for t in range(nt+1):
-                breakpoint()
+            for t in range(xts.shape[1]):
                 state_t = xts[i,t].unsqueeze(0)
                 if failure_mask(state_t).any():
                     failures[i] = True
