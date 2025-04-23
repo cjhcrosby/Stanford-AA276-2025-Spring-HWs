@@ -63,7 +63,7 @@ def plot_h(fig, ax, px, py, slice, h_fn):
     
     v_abs_max = max(abs(h_values_np.min()), abs(h_values_np.max()))
     pcm = ax.pcolormesh(PX_np, PY_np, h_values_np, 
-                        cmap='seismic', 
+                        cmap='seismic_r', 
                         shading='auto',
                         vmin=-v_abs_max, vmax=v_abs_max)
     
@@ -130,7 +130,7 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
         positions = xts_np[i, :, :2]
         safe0 = h_fn(x0[i:i+1]).item()
         color = 'blue' if safe0 >= 0 else 'red'
-        ax.plot(positions[:, 0], positions[:, 1], color=color)
+        ax.plot(positions[:, 0], positions[:, 1], color=color, alpha=0.5)
         ax.scatter(positions[0, 0], positions[0, 1], color=color, marker='o')
     initially_safe = safe_mask(x0)
     failures = torch.zeros_like(initially_safe)
