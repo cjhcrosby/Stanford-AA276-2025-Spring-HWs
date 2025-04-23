@@ -55,29 +55,21 @@ def plot_h(fig, ax, px, py, slice, h_fn):
     X[..., 1] = PY
     X[..., 2:] = slice[2:]
 
-    # Evaluate the CBF function on the grid
-    h_values = h_fn(X.reshape(-1, 13)).reshape(len(px), len(py))
-    
-    # Print stats to debug (you can remove later)
-    print(f"h_values stats: min={h_values.min().item()}, max={h_values.max().item()}")
-    
-    # Convert to numpy for matplotlib
+    h_values = h_fn(X.reshape(-1, 13)).reshape(len(px), len(py)) # reshape the mesh
+        
     PX_np = PX.numpy()
     PY_np = PY.numpy()
     h_values_np = h_values.detach().cpu().numpy()
     
-    # Create a colormap with explicit value range
     v_abs_max = max(abs(h_values_np.min()), abs(h_values_np.max()))
     pcm = ax.pcolormesh(PX_np, PY_np, h_values_np, 
-                        cmap='RdBu_r', 
+                        cmap='seismic', 
                         shading='auto',
                         vmin=-v_abs_max, vmax=v_abs_max)
     
-    # Add a colorbar
     cbar = fig.colorbar(pcm, ax=ax)
     cbar.set_label('CBF Value h(x)')
     
-    # Add multiple contour levels for better visualization
     levels = [0]
     if h_values_np.min() < 0 and h_values_np.max() > 0:
         ax.contour(PX_np, PY_np, h_values_np, levels=levels, 
@@ -130,6 +122,24 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     def u_fn(x):
         return u_qp(x, h_fn(x), dhdx_fn(x), u_ref_fn(x), gamma, lmbda)
     # first, you should compute state trajectories xts using roll_out(.)
+    xts = roll_out(x0, u_fn, nt, dt)
+    xts = xts.detach().cpu().numpy()
+    batch_size = x0.shape[0]
+    for i in range(batch_size):
+        positions = xts[i, :, :2]
+        safe0 = h_fn(x0[i:i+1]).item()
+        color = 'blue' if safe0 >= 0 else 'red'
+        ax.plot(positions[:, 0], positions[:, 1], color=color)
+        ax.scatter(positions[0, 0], positions[0, 1], color=color, marker='o')
+    initially_safe = safe_mask(x0)
+    failures = torch.zeros_like(initially_safe)
+    for i in range(batch_size):
+        if initially_safe[i]:
+            # Check all states in this trajectory
+            for t in range(nt+1):
+                if failure_mask(xts[i, t:t+1])[0]:
+                    failures[i] = True
+                    break
+    false_safety_rate = torch.sum(failures) / torch.sum(initially_safe)
 
-    # YOUR CODE HERE
-    pass
+    return false_safety_rate.item()
