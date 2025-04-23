@@ -131,7 +131,7 @@ cbf_controller = NeuralCBFController(
     data_module,
     experiment_suite=experiment_suite,
     cbf_hidden_layers=3,
-    cbf_hidden_size=256, # lower size
+    cbf_hidden_size=128, # lower size
     cbf_lambda=0.3,
     cbf_relaxation_penalty=1e3,
     controller_period=controller_period,
