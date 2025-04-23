@@ -129,7 +129,7 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     for i in range(batch_size): # loop thru batches
         positions = xts_np[i, :, :2]
         safe0 = h_fn(x0[i:i+1]).item()
-        color = 'blue' if safe0 >= 0 else 'red'
+        color = 'blue' if safe0 > 0 else 'red'
         ax.plot(positions[:, 0], positions[:, 1], color=color, alpha=0.5)
         ax.scatter(positions[0, 0], positions[0, 1], color=color, marker='o')
     initially_safe = safe_mask(x0)
