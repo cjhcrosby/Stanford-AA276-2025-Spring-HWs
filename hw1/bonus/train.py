@@ -87,16 +87,16 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
         f_res = f(x)
         batch_size = x.shape[0]
         result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  
-        result[:, 0, 0] = f_res[:, 0]
-        result[:, 1, 0] = f_res[:, 1]
+        result[:, 0, 0] = f_res[:, 0].clone()
+        result[:, 1, 0] = f_res[:, 1].clone()
         return result
     
     def _g(self, x, params):
         g_res = g(x)
         batch_size = x.shape[0]
         result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  
-        result[:, 0, 0] = g_res[:, 0]
-        result[:, 1, 0] = g_res[:, 1]
+        result[:, 0, 0] = g_res[:, 0].clone()
+        result[:, 1, 0] = g_res[:, 1].clone()
         return result
 
 dynamics_model = CustomInvertedPendulum(
@@ -119,7 +119,7 @@ data_module = EpisodicDataModule(
     max_points=10000000,
     val_split=0.01,
     batch_size=1024,
-    quotas={"safe": 0.6, "unsafe": 0.2, "goal": 0.1},
+    quotas={"safe": 0.7, "unsafe": 0.2, "goal": 0.1},
 )
 
 experiment_suite = ExperimentSuite([])
