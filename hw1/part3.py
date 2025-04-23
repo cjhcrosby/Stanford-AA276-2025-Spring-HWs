@@ -48,18 +48,36 @@ def plot_h(fig, ax, px, py, slice, h_fn):
             h_fn takes a torch float32 tensor with shape [batch_size, 13]
             and outputs a torch float32 tensor with shape [batch_size]
     """
-    # here is some starting code that might be helpful:
-    PX, PY = torch.meshgrid(px, py)
-    X = torch.zeros((len(px), len(py), 13))
-    X[..., 0] = PX
-    X[..., 1] = PY
-    X[..., 2:] = slice[2:]
-    # X: torch float32 tensor with shape [len(px), len(py), 13] is a 2D grid of states
-    # you should plot h_fn(X) (reshape X as needed to be compatible with h_fn)
-    # you might want to use ax.pcolormesh(.), fig.colorbar(.), and ax.contour(.)
-
-    # YOUR CODE HERE
-    pass
+    # Evaluate the CBF function on the grid
+    h_values = h_fn(X.reshape(-1, 13)).reshape(len(px), len(py))
+    
+    # Print stats to debug (you can remove later)
+    print(f"h_values stats: min={h_values.min().item()}, max={h_values.max().item()}")
+    
+    # Convert to numpy for matplotlib
+    PX_np = PX.numpy()
+    PY_np = PY.numpy()
+    h_values_np = h_values.detach().cpu().numpy()
+    
+    # Create a colormap with explicit value range
+    v_abs_max = max(abs(h_values_np.min()), abs(h_values_np.max()))
+    pcm = ax.pcolormesh(PX_np, PY_np, h_values_np, 
+                        cmap='RdBu_r', 
+                        shading='auto',
+                        vmin=-v_abs_max, vmax=v_abs_max)
+    
+    # Add a colorbar
+    cbar = fig.colorbar(pcm, ax=ax)
+    cbar.set_label('CBF Value h(x)')
+    
+    # Add multiple contour levels for better visualization
+    levels = [0]
+    if h_values_np.min() < 0 and h_values_np.max() > 0:
+        ax.contour(PX_np, PY_np, h_values_np, levels=levels, 
+                   colors='k', linewidths=2)
+    
+    # Force plot updates
+    fig.canvas.draw()
 
 
 from part1 import safe_mask, failure_mask

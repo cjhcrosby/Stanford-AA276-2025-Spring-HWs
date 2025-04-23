@@ -26,7 +26,7 @@ ecos
 scs
 casadi
 
-# Geometry
+# Geometrypip
 shapely
 
 # Freeze versions to avoid bugs

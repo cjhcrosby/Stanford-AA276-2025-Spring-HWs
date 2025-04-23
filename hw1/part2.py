@@ -21,6 +21,7 @@ When you are done, you can sanity check your code (locally) by running `python s
 
 
 import torch
+import numpy as np
 from part1 import f, g
 
 
@@ -101,20 +102,39 @@ def u_qp(x, h, dhdx, u_ref, gamma, lmbda):
     returns:
         u_qp: torch float32 tensor with shape [batch_size, 4]
     """
-    # YOUR CODE HERE
+    h_np = h.detach().cpu().numpy()
+    dhdx_np = dhdx.detach().cpu().numpy()
+    u_ref_np = u_ref.detach().cpu().numpy()
+
+    f_x = f(x).detach().cpu().numpy()
+    g_x = g(x).detach().cpu().numpy()
+    
+    u_max, u_min = control_limits()
+    u_min_np = u_min.detach().cpu().numpy()
+    u_max_np = u_max.detach().cpu().numpy()
+    
     batch_size = x.shape[0]
-    u = cp.Variable(u_ref.shape)
-    constraints = []
-    breakpoint()        
-    constraints.append(u >= control_limits()[0].repeat(batch_size,1))
-    constraints.append(u <= control_limits()[1].repeat(batch_size,1))
-    constraints.append(dhdx + gamma*h + lmbda >= 0)
-    # Define the objective function
-    objective = cp.Minimize(cp.sum_squares(u - u_ref))
-    # Define the problem
-    prob = cp.Problem(objective, constraints)
-    prob.solve()
-    u_qp = u.value
-    u_qp = torch.tensor(u_qp, dtype=torch.float32)
+    u_dim = u_ref.shape[1]
+    u_result = np.zeros((batch_size, u_dim))
+    delta_result = np.zeros((batch_size, 1))
+    
+    for i in range(batch_size):
+        u_i = cp.Variable(u_dim)
+        delta_i = cp.Variable()
+        Lf = dhdx_np[i] @ f_x[i]
+        Lg = dhdx_np[i] @ g_x[i]
+        constraints = []
+        constraints.append(Lf + Lg@u_i + gamma * h_np[i] + delta_i >=0)
+        constraints.append(u_i >= u_min_np)
+        constraints.append(u_i <= u_max_np)
+        constraints.append(delta_i >= 0)
+
+        objective = cp.Minimize(cp.sum_squares(u_i - u_ref_np[i]) + lmbda * delta_i**2)
+        prob = cp.Problem(objective, constraints)
+        J = prob.solve()
+        u_result[i] = u_i.value
+        delta_result[i] = delta_i.value
+    u_qp = torch.tensor(u_result, dtype=torch.float32)
     return u_qp
+
     pass
