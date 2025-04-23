@@ -75,7 +75,6 @@ def plot_h(fig, ax, px, py, slice, h_fn):
         ax.contour(PX_np, PY_np, h_values_np, levels=levels, 
                    colors='k', linewidths=2)
     
-    # Force plot updates
     fig.canvas.draw()
 
 
@@ -128,7 +127,7 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     batch_size = x0.shape[0]
     for i in range(batch_size): # loop thru batches
         positions = xts_np[i, :, :2]
-        safe0 = h_fn(x0[i:i+1]).item()
+        safe0 = h_fn(x0[i]).item()
         color = 'blue' if safe0 >= 0 else 'red'
         ax.plot(positions[:, 0], positions[:, 1], color=color, alpha=0.5)
         ax.scatter(positions[0, 0], positions[0, 1], color=color, marker='o')
