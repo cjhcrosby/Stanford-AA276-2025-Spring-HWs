@@ -141,6 +141,9 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
                 if failure_mask(state_t).any():
                     failures[i] = True
                     break
+    print(f"initally safe {initially_safe}")
+    print(f"failures{failures}")
+
     false_safety_rate = torch.sum(failures) / torch.sum(initially_safe)
 
     return false_safety_rate.item()
