@@ -122,10 +122,11 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     def u_fn(x):
         return u_qp(x, h_fn(x), dhdx_fn(x), u_ref_fn(x), gamma, lmbda)
     # first, you should compute state trajectories xts using roll_out(.)
-    xts = roll_out(x0, u_fn, nt, dt)
-    xts_np = xts.detach().cpu().numpy()
+    xts = roll_out(x0, u_fn, nt, dt) # compute trajectpries
+
+    xts_np = xts.detach().cpu().numpy() # make a numpy copy
     batch_size = x0.shape[0]
-    for i in range(batch_size):
+    for i in range(batch_size): # loop thru batches
         positions = xts_np[i, :, :2]
         safe0 = h_fn(x0[i:i+1]).item()
         color = 'blue' if safe0 >= 0 else 'red'
@@ -135,9 +136,9 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     failures = torch.zeros_like(initially_safe)
     for i in range(batch_size):
         if initially_safe[i]:
-            # Check all states in this trajectory
             for t in range(nt+1):
-                if failure_mask(xts[i, t:t+1])[0]:
+                state_t = xts[i,t].unsqueeze(0)
+                if failure_mask(state_t).any():
                     failures[i] = True
                     break
     false_safety_rate = torch.sum(failures) / torch.sum(initially_safe)
