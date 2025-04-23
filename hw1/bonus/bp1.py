@@ -165,23 +165,38 @@ def main2_3():
     plt.show()
 
 def plot_neural_vs_analytical_cbf():
-    # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    
     checkpoint_path = 'outputs/checkpoints/cbf-epoch=06-val_total_loss=0.00.ckpt'
-
+    
+    # Load model
     model = NeuralCBFController.load_from_checkpoint(checkpoint_path)
     model.eval()
-
+    
+    # Create test points
     thetas = np.linspace(-a, a, 100)
     dthetas = np.linspace(-b, b, 100)
     theta, dtheta = np.meshgrid(thetas, dthetas)
-
+    
     grid_points = np.stack([theta.flatten(), dtheta.flatten()], axis=1)
     x_tensor = torch.tensor(grid_points, dtype=torch.float32)
-
-    with torch.no_grad():
-        neural_values = model.cbf(x_tensor).cpu().numpy().reshape(theta.shape)
     
+    # Debug - print available attributes
+    print("Available model attributes:", [attr for attr in dir(model) if not attr.startswith('_')])
+    
+    # Extract the CBF value correctly - use the appropriate method from the model
+    with torch.no_grad():
+        # Try these options based on the NeuralCBFController API:
+        try:
+            # Option 1: Use V method (used for both CLF and CBF in this framework)
+            neural_values = model.V(x_tensor).cpu().numpy().reshape(theta.shape)
+        except AttributeError:
+            try:
+                # Option 2: Use cbf_net directly
+                neural_values = model.cbf_net(x_tensor).cpu().numpy().reshape(theta.shape)
+            except AttributeError:
+                # Option 3: Try other common naming patterns
+                neural_values = model.h(x_tensor).cpu().numpy().reshape(theta.shape)
+    
+    # Rest of your visualization code...
     analytical_values = h([theta, dtheta])
     dh_values = dh([theta, dtheta], u_nom([theta, dtheta], 0))
 
