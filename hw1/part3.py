@@ -27,7 +27,7 @@ REMEMBER TO SHUTDOWN YOUR VIRTUAL MACHINES AFTER TRAINING, TO AVOID ACCUMULATING
 
 
 import torch
-
+import pdb
 
 def plot_h(fig, ax, px, py, slice, h_fn):
     """
@@ -137,6 +137,7 @@ def plot_and_eval_xts(fig, ax, x0, u_ref_fn, h_fn, dhdx_fn, gamma, lmbda, nt, dt
     for i in range(batch_size):
         if initially_safe[i]:
             for t in range(nt+1):
+                breakpoint()
                 state_t = xts[i,t].unsqueeze(0)
                 if failure_mask(state_t).any():
                     failures[i] = True
