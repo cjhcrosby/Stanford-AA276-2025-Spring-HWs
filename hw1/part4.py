@@ -106,7 +106,7 @@ def failure_mask(x):
     Return a boolean tensor indicating whether the states x are in the failure set.
 
     args:
-        x: torch float32 tensor with shape [batch_size, 13]
+        x: torch float32 tensor with shape [batch_size, 2]
 
     returns:
         is_failure: torch bool tensor with shape [batch_size]
@@ -121,28 +121,29 @@ def f(x):
     Note: we have already implemented this for you!
 
     args:
-        x: torch float32 tensor with shape [batch_size, 13]
+        x: torch float32 tensor with shape [batch_size, 2]
         
     returns:
-        f: torch float32 tensor with shape [batch_size, 13]
+        f: torch float32 tensor with shape [batch_size, 2]
     """
-    f[:, 0] = x[:,1]
-    f[:, 1] = GRAV/LENG * torch.sin(x[:,0])
-    return f
+    f_result = torch.zeros((x.shape[0], 2), dtype=torch.float32)
+    f_result[:, 0] = x[:,1]
+    f_result[:, 1] = GRAV/LENG * torch.sin(x[:,0])
+    return f_result
 
 def g(x):
     """
     Return the control-dependent part of the control-affine dynamics.
 
     args:
-        x: torch float32 tensor with shape [batch_size, 13]
+        x: torch float32 tensor with shape [batch_size, 2]
        
     returns:
-        g: torch float32 tensor with shape [batch_size, 13, 4]
+        g: torch float32 tensor with shape [batch_size, 2]
     """
 
+    g_result = torch.zeros((x.shape[0], 2), dtype=torch.float32)
+    g_result[:,0] = 0
+    g_result[:,1] = 1/(MASS*LENG**2)
 
-    g[:,0] = 0
-    g[:,1] = 1/(MASS*LENG**2)
-
-    return g
+    return g_result
