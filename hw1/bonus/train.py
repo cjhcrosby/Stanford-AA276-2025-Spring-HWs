@@ -72,7 +72,6 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
     def __init__(self, nominal_params, dt=0.01, controller_dt=None, scenarios=None):
         super().__init__(nominal_params, dt, controller_dt, scenarios)
     
-    # Override methods with your part4 implementations
     @property
     def state_limits(self):
         return state_limits()
@@ -85,10 +84,9 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
         return safe_mask(x)
     
     def _f(self, x, params):
-        # Adapt your f function to return the right shape
         f_res = f(x)
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  
         result[:, 0, 0] = f_res[:, 0]
         result[:, 1, 0] = f_res[:, 1]
         return result
@@ -96,12 +94,11 @@ class CustomInvertedPendulum(inverted_pendulum.InvertedPendulum):
     def _g(self, x, params):
         g_res = g(x)
         batch_size = x.shape[0]
-        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  # Match input device
+        result = torch.zeros((batch_size, self.n_dims, 1), device=x.device)  
         result[:, 0, 0] = g_res[:, 0]
         result[:, 1, 0] = g_res[:, 1]
         return result
 
-# Then use it
 dynamics_model = CustomInvertedPendulum(
     nominal_params,
     dt=simulation_dt,
@@ -109,7 +106,6 @@ dynamics_model = CustomInvertedPendulum(
     scenarios=scenarios
 )
 
-# Initialize the DataModule
 initial_conditions = [
     (-np.pi, np.pi),
     (-8.0, 8.0)
@@ -123,7 +119,7 @@ data_module = EpisodicDataModule(
     max_points=10000000,
     val_split=0.01,
     batch_size=1024,
-    quotas={"safe": 0.2, "unsafe": 0.2, "goal": 0.4},
+    # quotas={"safe": 0.2, "unsafe": 0.2, "goal": 0.4},
 )
 
 experiment_suite = ExperimentSuite([])
@@ -135,11 +131,11 @@ cbf_controller = NeuralCBFController(
     data_module,
     experiment_suite=experiment_suite,
     cbf_hidden_layers=3,
-    cbf_hidden_size=128, # lower size
+    cbf_hidden_size=256, # lower size
     cbf_lambda=0.3,
     cbf_relaxation_penalty=1e3,
     controller_period=controller_period,
-    primal_learning_rate=1e-4,
+    primal_learning_rate=1e-3,
     scale_parameter=1.0, 
     learn_shape_epochs=1,
     use_relu=True,
@@ -157,13 +153,13 @@ os.makedirs('outputs/checkpoints', exist_ok=True)
 checkpoint_callback = ModelCheckpoint(
     monitor='Total loss / val',
     dirpath='outputs/checkpoints',
-    filename='cbf-{epoch:02d}-{val_total_loss:.2f}',  # Changed from val_loss to match the metric
+    filename='cbf-{epoch:02d}-{val_total_loss:.2f}',  
     save_top_k=3,
     mode='min',
 )
 
 early_stop_callback = EarlyStopping(
-    monitor="Total loss / val",  # Change from "val_loss" to "Total loss / val"
+    monitor="Total loss / val",
     min_delta=0.00,
     patience=10,
     verbose=True,
@@ -183,7 +179,6 @@ trainer = pl.Trainer.from_argparse_args(
 torch.autograd.set_detect_anomaly(True)
 trainer.fit(cbf_controller)
 
-# Add after trainer.fit() but before shutdown
 if os.path.exists('outputs/checkpoints'):
     print("Checkpoint files found:", os.listdir('outputs/checkpoints'))
 else:
@@ -192,4 +187,4 @@ else:
 # Shutdown the VM after training completes
 import os
 print("Training complete. Shutting down the VM in 1 minute...")
-os.system("sudo shutdown -h +1")  # Shutdown in 1 minute
+os.system("sudo shutdown -h +1")  #

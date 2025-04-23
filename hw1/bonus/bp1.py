@@ -220,7 +220,6 @@ def plot_neural_vs_analytical_cbf():
     ax2.set_ylabel(r'$\dot{\theta}$')
     ax2.grid(True)
     
-    # Set same limits for both plots
     for ax in [ax1, ax2]:
         ax.set_xlim(-0.5, 0.5)
         ax.set_ylim(-0.5, 0.5)
