@@ -152,10 +152,12 @@ tb_logger = pl_loggers.TensorBoardLogger(
     name='',
 )
 
+os.makedirs('outputs/checkpoints', exist_ok=True)
+
 checkpoint_callback = ModelCheckpoint(
-    monitor='Total loss / val',  # Change from "val_loss" to "Total loss / val"
+    monitor='Total loss / val',
     dirpath='outputs/checkpoints',
-    filename='cbf-{epoch:02d}-{val_loss:.2f}',
+    filename='cbf-{epoch:02d}-{val_total_loss:.2f}',  # Changed from val_loss to match the metric
     save_top_k=3,
     mode='min',
 )
@@ -180,6 +182,12 @@ trainer = pl.Trainer.from_argparse_args(
 # Train
 torch.autograd.set_detect_anomaly(True)
 trainer.fit(cbf_controller)
+
+# Add after trainer.fit() but before shutdown
+if os.path.exists('outputs/checkpoints'):
+    print("Checkpoint files found:", os.listdir('outputs/checkpoints'))
+else:
+    print("No checkpoint directory found!")
 
 # Shutdown the VM after training completes
 import os
