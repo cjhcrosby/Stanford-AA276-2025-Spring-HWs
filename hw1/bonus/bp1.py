@@ -165,7 +165,7 @@ def main2_3():
     plt.show()
 
 def plot_neural_vs_analytical_cbf():
-    checkpoint_path = 'outputs/checkpoints/cbf-epoch=10-val_total_loss=0.00.ckpt'
+    checkpoint_path = 'outputs/checkpoints/cbf-epoch=11-val_total_loss=0.00.ckpt'
     
     # Load model
     model = NeuralCBFController.load_from_checkpoint(checkpoint_path)
