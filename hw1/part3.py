@@ -48,6 +48,13 @@ def plot_h(fig, ax, px, py, slice, h_fn):
             h_fn takes a torch float32 tensor with shape [batch_size, 13]
             and outputs a torch float32 tensor with shape [batch_size]
     """
+    # Use indexing='ij' for newer PyTorch versions (or leave as default for older)
+    PX, PY = torch.meshgrid(px, py, indexing='ij')
+    X = torch.zeros((len(px), len(py), 13))
+    X[..., 0] = PX
+    X[..., 1] = PY
+    X[..., 2:] = slice[2:]
+    
     # Evaluate the CBF function on the grid
     h_values = h_fn(X.reshape(-1, 13)).reshape(len(px), len(py))
     
