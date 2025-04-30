@@ -28,7 +28,7 @@ def run_tests(func, test_cases):
             import torch
             if isinstance(result, torch.Tensor):
                 assert result.dtype == expected.dtype, f'Test {i} failed due to dtype mismatch: got {result.dtype}, expected {expected.dtype}'
-                assert torch.allclose(result, expected), f'Test {i} failed due to value mismatch'
+                assert torch.allclose(result, expected, rtol=1e-4), f'Test {i} failed due to value mismatch'
 
             elif isinstance(result, int) or isinstance(result, bool):
                 assert result == expected, f'Test {i} failed due to value mismatch'

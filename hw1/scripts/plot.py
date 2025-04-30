@@ -41,7 +41,7 @@ def u_ref_fn(x):
     u[:, 0] = 9.8
     return u
 gamma = 0
-lmbda = 1e4
+lmbda = 1e9
 nt = 10
 dt = 0.1
 
