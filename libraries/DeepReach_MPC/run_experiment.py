@@ -13,6 +13,18 @@ from dynamics import dynamics
 from experiments import experiments
 from utils import modules, dataio, losses
 
+def get_device():
+    """Get the appropriate device (MPS if available, otherwise CUDA, otherwise CPU)"""
+    if torch.backends.mps.is_available():
+        print("Using MPS")
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        print
+        return torch.device("cuda")
+    else:
+        print("Using CPU")
+        return torch.device("cpu")
+
 p = configargparse.ArgumentParser()
 p.add_argument('-c', '--config_filepath', required=False,
                is_config_file=True, help='Path to config file.')
@@ -299,15 +311,17 @@ if mode=='test':
 
 
 
-# # use single model
+device = get_device()
 model = modules.SingleBVPNet(in_features=dynamics.input_dim, out_features=1, type=orig_opt.model, mode=orig_opt.model_mode,
                              final_layer_factor=1., hidden_features=orig_opt.num_nl, num_hidden_layers=orig_opt.num_hl, 
                              periodic_transform_fn=dynamics.periodic_transform_fn)
-model.cuda()
+model.to(device)
 policy=None
 if orig_opt.pretrained_model != "none":
-    model.load_state_dict(torch.load(
-        "./runs/%s/training/checkpoints/model_final.pth" % orig_opt.pretrained_model)["model"])
+    state_dict = torch.load(
+        "./runs/%s/training/checkpoints/model_final.pth" % orig_opt.pretrained_model,
+        map_location=device)["model"]
+    model.load_state_dict(state_dict)
 
     if orig_opt.finetune:
         for param in model.parameters():

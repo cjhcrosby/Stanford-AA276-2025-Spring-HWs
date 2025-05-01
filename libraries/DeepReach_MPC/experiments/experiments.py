@@ -19,11 +19,22 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from utils.error_evaluators import scenario_optimization, ValueThresholdValidator, MultiValidator, MLPConditionedValidator, target_fraction, MLP, MLPValidator, SliceSampleGenerator
 import seaborn as sns
 
+def get_device():
+    """Get optimal available device (MPS for Mac, CUDA if available, otherwise CPU)"""
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
 
+# Global device variable
+device = get_device()
+print(f"Using device: {device}")
 
 class Experiment(ABC):
     def __init__(self, model, dataset, experiment_dir, use_wandb):
-        self.model = model
+        self.model = model.to(device)
         self.dataset = dataset
         self.experiment_dir = experiment_dir
         self.use_wandb = use_wandb
@@ -103,9 +114,9 @@ class Experiment(ABC):
                 for step, (model_input, gt) in enumerate(train_dataloader):
                     start_time = time.time()
 
-                    model_input = {key: value.cuda()
+                    model_input = {key: value.to(device)
                                    for key, value in model_input.items()}
-                    gt = {key: value.cuda() for key, value in gt.items()}
+                    gt = {key: value.to(device) for key, value in gt.items()}
 
                     model_results = self.model(
                         {'coords': model_input['model_inputs']})
@@ -128,7 +139,7 @@ class Experiment(ABC):
                             MPC_results['model_in'].detach(), MPC_results['model_out'].squeeze(dim=-1))
    
                     else:
-                        MPC_values=torch.Tensor([0]).cuda()
+                        MPC_values=torch.Tensor([0]).to(device)
                         
 
                     # Compute losses
@@ -423,8 +434,8 @@ class Experiment(ABC):
 
             
             if data_step == "eval_w_gt":
-                coords=torch.load(os.path.join(gt_data_path,"coords.pt")).cuda()
-                gt_values=torch.load(os.path.join(gt_data_path,"gt_values.pt")).cuda()
+                coords=torch.load(os.path.join(gt_data_path,"coords.pt")).to(device)
+                gt_values=torch.load(os.path.join(gt_data_path,"gt_values.pt")).to(device)
                 with torch.no_grad():
                     results = model(
                         {'coords': self.dataset.dynamics.coord_to_input(coords)})
@@ -820,7 +831,7 @@ class Experiment(ABC):
                     coords[:, 2:] = (xys[:, 1] * torch.ones(self.dataset.dynamics.N-1, xys.size()[0])).t()
 
                     with torch.no_grad():
-                        model_results = self.model({'coords': self.dataset.dynamics.coord_to_input(coords.cuda())})
+                        model_results = self.model({'coords': self.dataset.dynamics.coord_to_input(coords.to(device))})
                         values = self.dataset.dynamics.io_to_value(model_results['model_in'].detach(), model_results['model_out'].squeeze(dim=-1).detach())
                     
                     learned_value = values.detach().cpu().numpy().reshape(x_resolution, y_resolution)
@@ -911,7 +922,7 @@ class Experiment(ABC):
 
             with torch.no_grad():
                 model_results = self.model(
-                    {'coords': self.dataset.dynamics.coord_to_input(coords.cuda())})
+                    {'coords': self.dataset.dynamics.coord_to_input(coords.to(device))})
 
                 values = self.dataset.dynamics.io_to_value(model_results['model_in'].detach(
                 ), model_results['model_out'].squeeze(dim=-1).detach())
@@ -929,7 +940,7 @@ class Experiment(ABC):
                 'origin': 'lower',
             }
             ax.imshow(BRT_img, **imshow_kwargs)
-            lx=self.dataset.dynamics.boundary_fn(coords.cuda()[...,1:]).detach().cpu().numpy().reshape(x_resolution, y_resolution).T
+            lx=self.dataset.dynamics.boundary_fn(coords.to(device)[...,1:]).detach().cpu().numpy().reshape(x_resolution, y_resolution).T
             zero_contour = ax.contour(X, 
                                 Y, 
                                 BRT_img, 
@@ -978,10 +989,10 @@ class Experiment(ABC):
                 coords[:, 1 + plot_config['y_axis_idx']] = xys[:, 1]
                 coords[:, 1 + plot_config['z_axis_idx']] = zs[j]
 
-                lx=self.dataset.dynamics.boundary_fn(coords.cuda()[...,1:]).detach().cpu().numpy().reshape(x_resolution, y_resolution).T
+                lx=self.dataset.dynamics.boundary_fn(coords.to(device)[...,1:]).detach().cpu().numpy().reshape(x_resolution, y_resolution).T
                 with torch.no_grad():
                     model_results = self.model(
-                        {'coords': self.dataset.dynamics.coord_to_input(coords.cuda())})
+                        {'coords': self.dataset.dynamics.coord_to_input(coords.to(device))})
                     values = self.dataset.dynamics.io_to_value(model_results['model_in'].detach(
                         ), model_results['model_out'].squeeze(dim=-1).detach())
 
@@ -1261,7 +1272,7 @@ class Experiment(ABC):
                 coords[:, 1 + plot_config['z_axis_idx']] = zs[i]
 
             model_results = model(
-                {'coords': dataset.dynamics.coord_to_input(coords.cuda())})
+                {'coords': dataset.dynamics.coord_to_input(coords.to(device))})
             values = dataset.dynamics.io_to_value(model_results['model_in'].detach(
             ), model_results['model_out'].detach().squeeze(dim=-1)).detach().cpu()
             value_grids[i] = values.reshape(len(xs), len(ys))

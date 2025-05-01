@@ -18,6 +18,20 @@ import scipy.io as spio
 # in the future, code will need to be fixed to correctly handle parametrized models
 
 
+def get_device():
+    """Get optimal available device (MPS for Mac, CUDA if available, otherwise CPU)"""
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
+# Global device variable (use this instead of hardcoded .cuda())
+device = get_device()
+print(f"Using device: {device}")
+
+
 class Dynamics(ABC):
     def __init__(self,
                  name: str, loss_type: str, set_mode: str,
@@ -213,10 +227,10 @@ class VertDrone2D(Dynamics):
         self.gravity = 9.8                             # g
         self.input_multiplier = 12.0   # K
         self.input_magnitude_max = 1.0     # u_max
-        self.state_range_ = torch.tensor([[-4, 4],[-0.5, 3.5]]).cuda() # v, z, k
-        self.control_range_ =torch.tensor([[-self.input_magnitude_max, self.input_magnitude_max]]).cuda()
-        self.eps_var=torch.tensor([2]).cuda()
-        self.control_init= torch.ones(1).cuda()*self.gravity/self.input_multiplier 
+        self.state_range_ = torch.tensor([[-4, 4],[-0.5, 3.5]]).to(device) # v, z, k
+        self.control_range_ =torch.tensor([[-self.input_magnitude_max, self.input_magnitude_max]]).to(device)
+        self.eps_var=torch.tensor([2]).to(device)
+        self.control_init= torch.ones(1).to(device)*self.gravity/self.input_multiplier 
 
 
         state_mean_=(self.state_range_[:,0]+self.state_range_[:,1])/2.0
@@ -249,7 +263,7 @@ class VertDrone2D(Dynamics):
         return wrapped_state 
 
     def periodic_transform_fn(self, input):
-        return input.cuda()
+        return input.to(device)
     
     # ParameterizedVertDrone2D dynamics
     # \dot v = k*u - g
@@ -294,10 +308,10 @@ class ParameterizedVertDrone2D(Dynamics):
         self.gravity = gravity                             # g
         self.input_multiplier = input_multiplier   # k_max
         self.input_magnitude_max = input_magnitude_max     # u_max
-        self.state_range_ = torch.tensor([[-4, 4],[-0.5, 3.5],[0, self.input_multiplier]]).cuda() # v, z, k
-        self.control_range_ =torch.tensor([[-self.input_magnitude_max, self.input_magnitude_max]]).cuda()
-        self.eps_var=torch.tensor([2]).cuda()
-        self.control_init= torch.ones(1).cuda()*gravity/input_multiplier 
+        self.state_range_ = torch.tensor([[-4, 4],[-0.5, 3.5],[0, self.input_multiplier]]).to(device) # v, z, k
+        self.control_range_ =torch.tensor([[-self.input_magnitude_max, self.input_magnitude_max]]).to(device)
+        self.eps_var=torch.tensor([2]).to(device)
+        self.control_init= torch.ones(1).to(device)*gravity/input_multiplier 
 
 
         state_mean_=(self.state_range_[:,0]+self.state_range_[:,1])/2.0
@@ -329,7 +343,7 @@ class ParameterizedVertDrone2D(Dynamics):
         return wrapped_state
 
     def periodic_transform_fn(self, input):
-        return input.cuda()
+        return input.to(device)
     
     # ParameterizedVertDrone2D dynamics
     # \dot v = k*u - g
@@ -376,10 +390,10 @@ class Dubins3D(Dynamics):
         self.goalR = 0.5
         self.velocity = 1.
         self.omega_max = 1.2
-        self.state_range_ = torch.tensor([[-1, 1],[-1, 1],[-math.pi, math.pi]]).cuda()
-        self.control_range_ =torch.tensor([[-self.omega_max, self.omega_max]]).cuda()
-        self.eps_var=torch.tensor([1]).cuda()
-        self.control_init= torch.zeros(1).cuda()
+        self.state_range_ = torch.tensor([[-1, 1],[-1, 1],[-math.pi, math.pi]]).to(device)
+        self.control_range_ =torch.tensor([[-self.omega_max, self.omega_max]]).to(device)
+        self.eps_var=torch.tensor([1]).to(device)
+        self.control_init= torch.zeros(1).to(device)
         self.set_mode=set_mode
 
         state_mean_=(self.state_range_[:,0]+self.state_range_[:,1])/2.0
@@ -417,7 +431,7 @@ class Dubins3D(Dynamics):
         transformed_input[..., :3] = input[..., :3]
         transformed_input[..., 3] = torch.sin(input[..., 3]*self.state_var[-1])
         transformed_input[..., 4] = torch.cos(input[..., 3]*self.state_var[-1])
-        return transformed_input.cuda()
+        return transformed_input.to(device)
     
     # Dubins3D dynamics
     # \dot x    = v \cos \theta
@@ -503,13 +517,13 @@ class Quadrotor(Dynamics):
             [-5.0, 5.0],
             [-5.0, 5.0],
             [-5.0, 5.0],
-            ]).cuda()
+            ]).to(device)
         self.control_range_ =torch.tensor([[-self.collective_thrust_max, self.collective_thrust_max],
                 [-self.dwx_max, self.dwx_max],
                 [-self.dwy_max, self.dwy_max],
-                [-self.dwz_max, self.dwz_max]]).cuda()
-        self.eps_var=torch.tensor([20,8,8,4]).cuda()
-        self.control_init= torch.tensor([-self.Gz*0.0,0,0,0]).cuda() 
+                [-self.dwz_max, self.dwz_max]]).to(device)
+        self.eps_var=torch.tensor([20,8,8,4]).to(device)
+        self.control_init= torch.tensor([-self.Gz*0.0,0,0,0]).to(device) 
 
         state_mean_=(self.state_range_[:,0]+self.state_range_[:,1])/2.0
         state_var_=(self.state_range_[:,1]-self.state_range_[:,0])/2.0
@@ -553,7 +567,7 @@ class Quadrotor(Dynamics):
         return self.state_range_.cpu().tolist()
 
     def periodic_transform_fn(self, input):
-        return input.cuda()
+        return input.to(device)
     
     def equivalent_wrapped_state(self, state):
         wrapped_state = torch.clone(state)
@@ -826,10 +840,10 @@ class F1tenth(Dynamics):
         self.y_min=self.ymean-self.yvar
         self.y_max=self.ymean+self.yvar
 
-        self.state_range_ = torch.tensor([[self.x_min, self.x_max], [self.y_min, self.y_max], [-0.4189, 0.4189], [self.v_min, self.v_max], [-math.pi, math.pi], [-self.omega_max, self.omega_max], [-1, 1]]).cuda()
-        self.control_range_ = torch.tensor([[self.sv_min, self.sv_max], [-self.a_max, self.a_max]]).cuda()
-        self.eps_var = torch.tensor([self.sv_max**2, self.a_max**2]).cuda()
-        self.control_init = torch.tensor([0.0, 0.0]).cuda()
+        self.state_range_ = torch.tensor([[self.x_min, self.x_max], [self.y_min, self.y_max], [-0.4189, 0.4189], [self.v_min, self.v_max], [-math.pi, math.pi], [-self.omega_max, self.omega_max], [-1, 1]]).to(device)
+        self.control_range_ = torch.tensor([[self.sv_min, self.sv_max], [-self.a_max, self.a_max]]).to(device)
+        self.eps_var = torch.tensor([self.sv_max**2, self.a_max**2]).to(device)
+        self.control_init = torch.tensor([0.0, 0.0]).to(device)
 
         # for the track
         self.obstaclemap_file = 'dynamics/F1_map_obstaclemap.mat'
@@ -884,7 +898,7 @@ class F1tenth(Dynamics):
         transformed_input[..., 5] = torch.sin(input[..., 5]*self.state_var[4])
         transformed_input[..., 6] = torch.cos(input[..., 5]*self.state_var[4])
         transformed_input[..., 7:] = input[..., 6:]
-        return transformed_input.cuda()
+        return transformed_input.to(device)
     
     def dsdt(self, state, control, disturbance):
         # here the control is steering angle v and acceleration
@@ -1149,9 +1163,9 @@ class LessLinearND(Dynamics):
         self.input_shape = "box"
         self.game = set_mode
         
-        self.A = (-0.5 * torch.eye(N) - torch.cat((torch.cat((torch.zeros(1,1),torch.ones(N-1,1)),0),torch.zeros(N,N-1)),1)).cuda()
-        self.B = torch.cat((torch.zeros(1,N-1), 0.4*torch.eye(N-1)), 0).cuda()
-        self.Bumax = u_max * torch.matmul(self.B, torch.ones(self.N-1).cuda()).unsqueeze(0).unsqueeze(0).cuda()
+        self.A = (-0.5 * torch.eye(N) - torch.cat((torch.cat((torch.zeros(1,1),torch.ones(N-1,1)),0),torch.zeros(N,N-1)),1)).to(device)
+        self.B = torch.cat((torch.zeros(1,N-1), 0.4*torch.eye(N-1)), 0).to(device)
+        self.Bumax = u_max * torch.matmul(self.B, torch.ones(self.N-1).to(device)).unsqueeze(0).unsqueeze(0).to(device)
         self.C = torch.cat((torch.zeros(1,N-1), 0.1*torch.eye(N-1)), 0)
         self.gamma, self.mu, self.alpha = gamma, mu, alpha
         self.gamma_orig, self.mu_orig, self.alpha_orig = gamma, mu, alpha
@@ -1160,10 +1174,10 @@ class LessLinearND(Dynamics):
         self.goalR = ((N-1) ** 0.5) * self.goalR_2d # accounts for N-dimensional combination
         self.ellipse_params = torch.cat((((N-1) ** 0.5) * torch.ones(1), torch.ones(N-1) / 1.), 0) # accounts for N-dimensional combination
 
-        self.state_range_ = torch.tensor([[-1, 1] for _ in range(self.N)]).cuda()
-        self.control_range_ =torch.tensor([[-u_max, u_max] for _ in range(self.N-1)]).cuda()
-        self.eps_var=torch.tensor([u_max for _ in range(self.N-1)]).cuda()
-        self.control_init= torch.tensor([0.0 for _ in range(self.N-1)]).cuda() 
+        self.state_range_ = torch.tensor([[-1, 1] for _ in range(self.N)]).to(device)
+        self.control_range_ =torch.tensor([[-u_max, u_max] for _ in range(self.N-1)]).to(device)
+        self.eps_var=torch.tensor([u_max for _ in range(self.N-1)]).to(device)
+        self.control_init= torch.tensor([0.0 for _ in range(self.N-1)]).to(device) 
 
         super().__init__(
             name='50D system', loss_type='brt_hjivi', set_mode=set_mode,
@@ -1225,12 +1239,12 @@ class LessLinearND(Dynamics):
 
     
     def periodic_transform_fn(self, input):
-        return input.cuda()
+        return input.to(device)
     
     def boundary_fn(self, state):
         if self.ellipse_params.device != state.device: # FIXME: Patch to cover de/attached state bug
-            if state.device.type == 'cuda':
-                self.ellipse_params = self.ellipse_params.cuda()
+            if state.device.type == 'mps':
+                self.ellipse_params = self.ellipse_params.to(device)
             else:
                 self.ellipse_params = self.ellipse_params.cpu()
         return 0.5 * (torch.square(torch.norm(self.ellipse_params * state[..., :], dim=-1)) - (self.goalR ** 2))
@@ -1272,4 +1286,3 @@ class LessLinearND(Dynamics):
             'z_axis_idx': 2,
         }
 
-   

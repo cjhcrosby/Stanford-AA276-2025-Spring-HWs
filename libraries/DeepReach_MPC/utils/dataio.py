@@ -9,6 +9,19 @@ import random
 from bisect import bisect_right
 import gc
 
+# Add device detection function
+def get_device():
+    """Get optimal available device (MPS for Mac, CUDA if available, otherwise CPU)"""
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
+# Global device variable
+device = get_device()
+print(f"Using device: {device}")
 
 def get_mgrid(sidelen, dim=2):
     '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.'''
@@ -75,6 +88,8 @@ class ReachabilityDataset(Dataset):
         self.MPC_style = MPC_style
         self.num_iterative_refinement = num_iterative_refinement
 
+        self.device = device
+
         if use_MPC:
             if MPC_data_path == 'none':
                 # initialize MPC dataset
@@ -126,13 +141,14 @@ class ReachabilityDataset(Dataset):
     def generate_MPC_dataset(self, T, t, style="random"):
         print("Generating MPC dataset")
         self.mpc = MPC.MPC(horizon=None, receding_horizon=self.MPC_receding_horizon, dT=self.MPC_dt, num_samples=self.num_MPC_perturbation_samples,
-                           dynamics_=self.dynamics, device='cuda', mode=self.MPC_mode,
+                           dynamics_=self.dynamics, device=self.device, mode=self.MPC_mode,
                            sample_mode=self.MPC_sample_mode, lambda_=self.MPC_lambda_, style=self.MPC_style, num_iterative_refinement=self.num_iterative_refinement)
-        device = 'cuda'
+        
         MPC_states = self.sample_init_state()
 
         _, _, MPC_inputs, MPC_values = self.mpc.get_batch_data(
-            MPC_states.cuda(), T, self.policy, t=t)  # Make sure to generate at least one batch of data at T, so we have "look-ahead" MPC labels for deepreach
+            MPC_states.to(self.device), T, self.policy, t=t)
+            
         for i in tqdm(range(self.num_MPC_batches-1)):
             MPC_states = self.sample_init_state()
 
@@ -142,20 +158,19 @@ class ReachabilityDataset(Dataset):
             elif self.mpc.style == "receding":
                 t_max = random.randint(1, int(
                     T/self.MPC_dt/self.mpc.receding_horizon))*self.mpc.receding_horizon*self.MPC_dt
-                # t_max=T*1.0
             else:
                 raise NotImplementedError
 
             if style == "terminal" and i < self.num_MPC_batches/2:
                 t_max = T*1.0  # more data on the terminal time
-            # t_max=self.tMax
+                
             _, _, MPC_inputs_, MPC_values_ = self.mpc.get_batch_data(
-                MPC_states.to(device), t_max, self.policy, t=t)
+                MPC_states.to(self.device), t_max, self.policy, t=t)
+                
             MPC_inputs = torch.cat([MPC_inputs, MPC_inputs_], dim=0)
             MPC_values = torch.cat([MPC_values, MPC_values_], dim=0)
-        # print("Generated %d labels"%MPC_inputs.shape[0])
+            
         if style == "terminal":
-            # with more coords and values being at the terminal time
             MPC_inputs_ = MPC_inputs[MPC_inputs[:, 0] == T, ...]
             MPC_values_ = MPC_values[MPC_inputs[:, 0] == T, ...]
 
@@ -164,7 +179,6 @@ class ReachabilityDataset(Dataset):
             MPC_inputs = torch.cat([MPC_inputs[idxs, ...], MPC_inputs_], dim=0)
             MPC_values = torch.cat([MPC_values[idxs, ...], MPC_values_], dim=0)
 
-        # convert to memory-mapped tensor for faster query
         if not os.path.exists("./data"):
             os.makedirs("./data")
         device_id = os.environ.get("CUDA_VISIBLE_DEVICES")
@@ -183,10 +197,11 @@ class ReachabilityDataset(Dataset):
 
         del self.mpc  # free it to get some memory
         gc.collect()
-        torch.cuda.empty_cache()
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def __getitem__(self, idx):
-        # uniformly sample domain and include coordinates where source is non-zero
         model_states_normed = torch.empty((0, self.dynamics.state_dim))
         while model_states_normed.shape[0] < self.numpoints:
             model_states_normed_ = torch.zeros(
@@ -196,15 +211,11 @@ class ReachabilityDataset(Dataset):
         model_states_normed = model_states_normed[:self.numpoints, ...]
 
         if self.pretrain:
-            # only sample in time around the initial condition
             times = torch.full((model_states_normed.shape[0], 1), self.tMin)
         else:
-            # slowly grow time values from start time
-            # make the curriculum slightly (1.1 times) longer to avoid innaccuracy on the boundary
             times = self.tMin + torch.zeros(model_states_normed.shape[0], 1).uniform_(
                 0, (self.tMax*1.1-self.tMin) * min((self.counter+1) / self.counter_end, 1.0))
 
-            # make sure we always have training samples at the initial time
             if self.dynamics.deepReach_model in ['vanilla', 'diff']:
                 times[-self.num_src_samples:, 0] = self.tMin
 
@@ -215,13 +226,11 @@ class ReachabilityDataset(Dataset):
                 self.num_target_samples, 1), target_state_samples), dim=-1))[:, 1:self.dynamics.state_dim+1]
         model_inputs = torch.cat((times, model_states_normed), dim=1)
 
-        # generating MPC inputs
         if self.use_MPC:
             current_t = (self.tMax*1.0 - self.tMin) * \
                 min((self.counter) / self.counter_end, 1.0)
             if self.time_curr and not self.pretrain:
                 if current_t > self.MPC_dt:
-                    # Find upper bound index using precomputed sorted indices
                     max_idx = bisect_right(
                         self.MPC_inputs[self.mpc_time_sorted_indices][:, 0].cpu().numpy(), current_t)
 
@@ -234,7 +243,6 @@ class ReachabilityDataset(Dataset):
                         MPC_inputs_ = self.MPC_inputs[self.mpc_time_sorted_indices[:max_idx]]
                         MPC_values_ = self.MPC_values[self.mpc_time_sorted_indices[:max_idx]]
 
-                    # Augment with MPC data (around MPC datapoints)
                     if self.aug_with_MPC_data > 0:
                         num_available = min(max_idx, self.aug_with_MPC_data)
                         idxs = torch.randint(
@@ -242,7 +250,6 @@ class ReachabilityDataset(Dataset):
                         state_around_MPC_inputs = self.MPC_inputs[self.mpc_time_sorted_indices[idxs]]*1.0
                         state_around_MPC_inputs = torch.clip(
                             state_around_MPC_inputs*(torch.randn_like(state_around_MPC_inputs)*0.01+1.0), min=-1.0, max=1.0)
-                        # state_around_MPC_inputs[...,1:]=self.dynamics.clamp_state_input(state_around_MPC_inputs[...,1:])
                         model_inputs[-num_available:, ...] = state_around_MPC_inputs
 
                 else:
@@ -255,7 +262,6 @@ class ReachabilityDataset(Dataset):
                 MPC_inputs_ = self.MPC_inputs[idxs]
                 MPC_values_ = self.MPC_values[idxs]
 
-                # Augment with MPC data
                 if self.aug_with_MPC_data > 0 and not self.pretrain:
                     idxs = torch.randint(
                         0, len(self.MPC_inputs), (self.aug_with_MPC_data,))
@@ -276,7 +282,6 @@ class ReachabilityDataset(Dataset):
         if self.pretrain:
             dirichlet_masks = torch.ones(model_inputs.shape[0]) > 0
         else:
-            # only enforce initial conditions around self.tMin
             dirichlet_masks = (model_inputs[:, 0] == self.tMin)
 
         if self.pretrain:
