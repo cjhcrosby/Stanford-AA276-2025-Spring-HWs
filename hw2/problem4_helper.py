@@ -10,6 +10,17 @@ you will probably need to use separate scripts and venvs.
 
 import torch
 
+def get_device():
+    """Get optimal available device (MPS for Mac, CUDA if available, otherwise CPU)"""
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+# Global device variable
+device = get_device()
+print(f"Using device in losses.py: {device}")
 """
 Helper class for querying vf.ckpt.
 neuralvf = NeuralVF()
@@ -30,7 +41,7 @@ class NeuralVF:
         model = modules.SingleBVPNet(in_features=dynamics.input_dim, out_features=1, type='sine', mode='mlp',
                                     final_layer_factor=1., hidden_features=512, num_hidden_layers=3, 
                                     periodic_transform_fn=dynamics.periodic_transform_fn)
-        model.cuda()
+        model.to(device)
         model.load_state_dict(torch.load(ckpt_path)['model'])
 
         self.dynamics = dynamics
@@ -46,7 +57,7 @@ class NeuralVF:
         coords = torch.concatenate((torch.ones((len(x), 1)), x), dim=1)
         model_input = self.dynamics.coord_to_input(coords)
         with torch.no_grad():
-            model_results = self.model({'coords': model_input.cuda()})
+            model_results = self.model({'coords': model_input.to(device)})
         values = self.dynamics.io_to_value(model_results['model_in'].detach(), model_results['model_out'].detach().squeeze(dim=-1))
         return values.cpu()
     
@@ -59,7 +70,7 @@ class NeuralVF:
         """
         coords = torch.concatenate((torch.ones((len(x), 1)), x), dim=1)
         model_input = self.dynamics.coord_to_input(coords)
-        model_results = self.model({'coords': model_input.cuda()})
+        model_results = self.model({'coords': model_input.to(device)})
         gradients = self.dynamics.io_to_dv(model_results['model_in'], model_results['model_out'].squeeze(dim=-1))[:, 1:]
         return gradients.cpu()
     
