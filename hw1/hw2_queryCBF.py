@@ -55,8 +55,8 @@ lower = torch.tensor([p_l,p_l,p_l,q_l,q_l,q_l,q_l,v_l,v_l,v_l,w_l,w_l,w_l])
 
 # create a large batch of random states to randomly sample from
 h_values = []
-batch_size = 1000
-for i in range(100):
+batch_size = 5000
+for i in range(20):
     x = torch.rand(batch_size, 13)*(upper-lower)+lower
     h_values.append(neuralcbf.values(x))
         
@@ -68,4 +68,4 @@ print(f'h values shape: {h_values.shape}')
 # print h values above 0
 print(f'h values above 0: {h_values[h_values >= 0].shape[0]}')
 # print h values above 0 divided by total samples
-print(f'h values below 0: {h_values[h_values >= 0].shape[0] / h_values.shape[0]}')
+print(f'h values above 0: {h_values[h_values >= 0].shape[0] / h_values.shape[0]}')
