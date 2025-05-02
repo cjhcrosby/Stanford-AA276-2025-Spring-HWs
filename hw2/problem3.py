@@ -17,11 +17,14 @@ from hj_reachability import sets
 from tqdm import tqdm
 
 u_bar = 3.0  # control bound
+m = 2.0
+l = 1.0
+g = 10.0
 class InvertedPendulum(dynamics.ControlAndDisturbanceAffineDynamics):
   def __init__(self,
-               m=2.,
-               l=1.,
-               g=10.,
+               m=m,
+               l=l,
+               g=g,
                u_bar=u_bar):
     self.m = m
     self.l = l
@@ -278,7 +281,7 @@ def simulate(x0):
         x = xs[i-1]
         u = optimal_safety_controller(x)
         us[i] = u
-        xs[i] = x + dt*np.array([x[1], 12*u-9.8])
+        xs[i] = x + dt * (np.array([x[1], (g / l) * jnp.sin(x[0])]) + np.array([0., 1/(m * l ** 2)]) * u)
     return xs, us
 
 def plot_trajectory(x_vals, tspan, cmap):
@@ -341,7 +344,7 @@ if __name__ == "__main__":
     # # # # 3.4
     x0_1 = np.array([-0.1, 0.4])
     x0_2 = np.array([-0.1, -0.3])
-    x0s = np.array([x0_1, x0_2]) # will plot all onto one figure
+    x0s = np.array([x0_1,x0_2]) # will plot all onto one figure
     plot_optimal_safety(x0s, values[-1], grid)
     
     
