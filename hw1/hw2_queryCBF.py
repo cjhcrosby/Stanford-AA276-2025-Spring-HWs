@@ -7,7 +7,7 @@ h_values = neuralcbf.h_values(x)
 h_gradients = neuralcbf.h_gradients(x)
 """
 class NeuralCBF:
-    def __init__(self, ckpt_path='outputs/cbf.ckpt'):
+    def __init__(self, ckpt_path='../hw2/outputs/cbf.ckpt'):
         try:
             from neural_clbf.controllers import NeuralCBFController
         except Exception as e:
