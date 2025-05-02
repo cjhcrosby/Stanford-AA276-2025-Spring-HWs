@@ -38,3 +38,4 @@ class NeuralCBF:
             dhdx(x): torch tensor with shape [batch_size, 13]
         """
         return -self.model.V_with_jacobian(x)[1].squeeze(1)
+    
