@@ -41,12 +41,28 @@ class NeuralCBF:
     
 # create a neuralcbf object
 neuralcbf = NeuralCBF()
+# define state bounds
+p_u = 3.0
+p_l = -3.0
+q_u = 1.0
+q_l = -1.0
+v_u = 5.0
+v_l = -5.0
+w_u = 5.0
+w_l = -5.0
+upper = torch.tensor([p_u,p_u,p_u,q_u,q_u,q_u,q_u,v_u,v_u,v_u,w_u,w_u,w_u])
+lower = torch.tensor([p_l,p_l,p_l,q_l,q_l,q_l,q_l,v_l,v_l,v_l,w_l,w_l,w_l])
+
 # create a large batch of random states to randomly sample from
 batch_size = 1000
-x = torch.rand(batch_size, 13) * (neuralcbf.model.state_max - neuralcbf.model.state_min) + neuralcbf.model.state_min
+x = torch.rand(batch_size, 13)*(upper-lower)+lower
 # get the h values and gradients
 h_values = neuralcbf.values(x)
 h_gradients = neuralcbf.gradients(x)
 # print the shapes of the h values and gradients
 print(f'h values shape: {h_values.shape}')
 print(f'h gradients shape: {h_gradients.shape}')
+# print h values above 0
+print(f'h values above 0: {h_values[h_values > 0].shape[0]}')
+# print h values below 0 divided by total samples
+print(f'h values below 0: {h_values[h_values < 0].shape[0] / batch_size}')
