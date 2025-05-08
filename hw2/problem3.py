@@ -51,7 +51,7 @@ class InvertedPendulum(dynamics.ControlAndDisturbanceAffineDynamics):
 grid = hj.Grid.from_lattice_parameters_and_boundary_conditions(
     hj.sets.Box(np.array([-jnp.pi, -10.]), # lower bounds
                 np.array([jnp.pi, 10.])),  # upper bounds
-    (101, 101))
+    (171, 171))
 
 # Define the implicit function l(x) for the failure set
 failure_values = 0.3 - jnp.abs(grid.states[..., 0])
@@ -334,17 +334,17 @@ if __name__ == "__main__":
     vbar = np.max(np.abs(values)) # max value of BRT
     
     # # # # 3.1 and 3.2
-    # create_interactive_plot()
+    create_interactive_plot()
     # save_values_gif(values, grid, times, save_path='outputs/values.gif')
 
-    # # # # 3.3
-    # volume = get_volume(values, grid, times)
-    # print(f'Volume of the BRT: {volume}, which is {100*volume/(grid.coordinate_vectors[0].shape[0]*grid.coordinate_vectors[1].shape[0])}% of the total volume of the state space.')
+    # # # 3.3
+    volume = get_volume(values, grid, times)
+    print(f'Volume of the BRT: {volume}, which is {100*volume/(grid.coordinate_vectors[0].shape[0]*grid.coordinate_vectors[1].shape[0])}% of the total volume of the state space.')
     
-    # # # # 3.4
-    x0_1 = np.array([-0.1, 0.4])
-    x0_2 = np.array([-0.1, -0.3])
-    x0s = np.array([x0_1,x0_2]) # will plot all onto one figure
-    plot_optimal_safety(x0s, values[-1], grid)
+    # # # # # 3.4
+    # x0_1 = np.array([-0.1, 0.4])
+    # x0_2 = np.array([-0.1, -0.3])
+    # x0s = np.array([x0_1,x0_2]) # will plot all onto one figure
+    # plot_optimal_safety(x0s, values[-1], grid)
     
     
